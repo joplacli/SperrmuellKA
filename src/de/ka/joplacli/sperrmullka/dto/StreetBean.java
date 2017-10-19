@@ -5,6 +5,7 @@ public class StreetBean {
 	private int value;
 	private String street;
 	private String letter;
+	private String date;
 	
 	public int getValue() {
 		return value;
@@ -23,5 +24,11 @@ public class StreetBean {
 	}
 	public void setLetter(String string) {
 		this.letter = string;
+	}
+	public String getDate() {
+		return date;
+	}
+	public void setDate(String date) {
+		this.date = date;
 	}
 }

@@ -15,6 +15,8 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -24,6 +26,7 @@ import org.jdom2.input.SAXBuilder;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 import de.ka.joplacli.sperrmullka.dto.StreetBean;
 
@@ -65,7 +68,7 @@ public class StreetsParser extends HttpServlet {
 			int index = 0;
 			for(StreetBean street:completeList){
 				index++;
-				out.println(String.format("%04d", index) + " - " + street.getLetter() + " - " + street.getStreet());					
+				out.println(String.format("%04d", index) + " - " + street.getLetter() + " - " + street.getDate() + " - " + street.getStreet());					
 			}
 		}
 	}
@@ -106,10 +109,14 @@ public class StreetsParser extends HttpServlet {
 						int value = child.getAttribute("value").getIntValue();
 						String content = child.getText();
 						
+						//We recover the date of the street
+						String date = recoverDateByStreet(firstLetter, secondLetter, value);
+						
 						StreetBean streetData = new StreetBean();
 						streetData.setLetter(firstLetter);
 						streetData.setStreet(content);
 						streetData.setValue(value);
+						streetData.setDate(date);
 						listStreets.add(streetData);
 					}
 					
@@ -123,6 +130,37 @@ public class StreetsParser extends HttpServlet {
 		}
 		
 		return listStreets;
+	}
+
+	private String recoverDateByStreet(String firstLetter, String secondLetter, int value) throws IOException {
+		MultivaluedMap formData = new MultivaluedMapImpl();
+		formData.add("strasse", Integer.toString(value));
+		formData.add("anzeigen", "anzeigen");
+		
+		Client client = Client.create();
+		WebResource webResource = client.resource("http://web3.karlsruhe.de/service/abfall/akal/akal.php?von=" + firstLetter + "&bis=" + secondLetter);
+
+		ClientResponse webResponse = webResource
+			    .type(MediaType.APPLICATION_FORM_URLENCODED_TYPE)
+			    .post(ClientResponse.class, formData);
+
+		String date = "dd.MM.yyyy";
+		if (webResponse.getStatus() == 200) {
+			InputStream in = webResponse.getEntityInputStream();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+			String line;
+			while((line = reader.readLine()) != null) {
+				if(line.contains("llabholung</td><td valign=top><b>")){
+					date = line.substring(line.indexOf("<b>") + 3, line.indexOf("<b>") + 3 + 10);
+					break;
+				}
+			}
+		} else {
+			throw new RuntimeException("Failed : HTTP error code : "
+					+ webResponse.getStatus());
+		}
+		
+		return date;
 	}
 
 	private String addValueQuotationMarks(String line) {
