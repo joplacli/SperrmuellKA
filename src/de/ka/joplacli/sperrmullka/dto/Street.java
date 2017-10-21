@@ -37,12 +37,7 @@ public class Street {
 	public Date getDate() {
 		return date;
 	}
-	public void setDate(String datestring) {
-		SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
-		try {
-			this.date = format.parse(datestring);
-		} catch (ParseException e) {
-			this.date = null;
-		}
+	public void setDate(Date date) {
+		this.date = date;
 	}
 }

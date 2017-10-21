@@ -8,6 +8,8 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -118,6 +120,7 @@ public class StreetsParser extends HttpServlet {
 					Document document = saxBuilder.build(new StringReader(newLine));
 					List<Element> children = document.getRootElement().getChildren();
 					
+					SimpleDateFormat format = new SimpleDateFormat("dd.MM.yyyy");
 					for(Element child:children){
 						int value = child.getAttribute("value").getIntValue();
 						String content = child.getText();
@@ -129,8 +132,12 @@ public class StreetsParser extends HttpServlet {
 						streetData.setLetter(firstLetter);
 						streetData.setStreetName(content);
 						streetData.setStreetId(value);
-						streetData.setDate(date);
-						listStreets.add(streetData);
+						try {
+							streetData.setDate(format.parse(date));
+						} catch (ParseException e) {
+							streetData.setDate(null);
+						}
+						listStreets.add(streetData);						
 					}
 					
 					break;
