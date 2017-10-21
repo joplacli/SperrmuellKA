@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +18,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
 
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -28,12 +32,13 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
-import de.ka.joplacli.sperrmullka.dto.StreetBean;
+import de.ka.joplacli.sperrmullka.dto.Street;
+import de.ka.joplacli.sperrmullka.dto.Streets;
 
 /**
  * Servlet implementation class StreetsParser
  */
-@WebServlet("/Endpoint")
+@WebServlet("/Endpoint/sperrmuell-data.xml")
 public class StreetsParser extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 
@@ -49,7 +54,8 @@ public class StreetsParser extends HttpServlet {
 	 */
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		
-		List<StreetBean> completeList = new ArrayList<>();
+		Streets streets = new Streets();
+		List<Street> completeList = new ArrayList<>();
 		for(int i = 65; i < 91; i++){
 			String firstChar = Character.toString ((char) i);
 			String secondChar = Character.toString ((char) (i + 1));
@@ -63,19 +69,26 @@ public class StreetsParser extends HttpServlet {
 			}
 		}
 		
+		streets.setStreets(completeList);
 		PrintWriter out = new PrintWriter(response.getOutputStream(), true);
 		if(completeList.size() > 0){
-			int index = 0;
-			for(StreetBean street:completeList){
-				index++;
-				out.println(String.format("%04d", index) + " - " + street.getLetter() + " - " + street.getDate() + " - " + street.getStreet());					
+			JAXBContext jaxbContext;
+			try {
+				jaxbContext = JAXBContext.newInstance(Streets.class);
+				Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+				jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
+				jaxbMarshaller.marshal(streets, out);
+
+			} catch (JAXBException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}
 	
-	private List<StreetBean> streetsByLetter(String firstLetter, String secondLetter) throws JDOMException, IOException{
+	private List<Street> streetsByLetter(String firstLetter, String secondLetter) throws JDOMException, IOException{
 		
-		List<StreetBean> listStreets = new ArrayList<>();
+		List<Street> listStreets = new ArrayList<>();
 		
 		Client client = Client.create();
 
@@ -112,10 +125,10 @@ public class StreetsParser extends HttpServlet {
 						//We recover the date of the street
 						String date = recoverDateByStreet(firstLetter, secondLetter, value);
 						
-						StreetBean streetData = new StreetBean();
+						Street streetData = new Street();
 						streetData.setLetter(firstLetter);
-						streetData.setStreet(content);
-						streetData.setValue(value);
+						streetData.setStreetName(content);
+						streetData.setStreetId(value);
 						streetData.setDate(date);
 						listStreets.add(streetData);
 					}
